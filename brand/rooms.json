@@ -1,6 +1,10 @@
 {
-  "_comment": "ONE Cocreation brand layer — TASK-262. Room id -> { title, note }. Matched against ?room= or ?director=/&dir=. An id not listed here is shown raw (derive-or-dash) — never invent a name for it.",
+  "_comment": "ONE Cocreation brand layer — TASK-262/TASK-302. Room id -> { title, note }. Matched against ?room= or ?director=/&dir=, after normalizeRoomId() (onecocreation.js), which mirrors the fork's own sanitizeRoomName() (lib.js:3747-3757: hyphens/non-word chars -> underscore, 30-char cap) — so a hyphenated key already matches an underscore param and vice versa. Both forms are listed here anyway per the T-264 underscore-native ruling (TASK-292 DESIGN.md SLOP #5): new room ids mint underscore-native, and the site mints onecocreation_studio (underscore). An id not listed here is shown raw (derive-or-dash) — never invent a name for it.",
   "onecocreation-studio": {
+    "title": "Heart Field · the studio",
+    "note": "Love's weekly reading room"
+  },
+  "onecocreation_studio": {
     "title": "Heart Field · the studio",
     "note": "Love's weekly reading room"
   }

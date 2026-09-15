@@ -214,6 +214,12 @@ body {
   color: var(--oc-text-muted);
   max-width: 380px;
 }
+#oc-join-door p.oc-join-permission {
+  margin: 0;
+  font-size: 12px;
+  color: var(--oc-text-muted);
+  max-width: 380px;
+}
 #oc-join-door input#oc-join-name {
   width: 260px;
   max-width: 80vw;
@@ -247,6 +253,23 @@ body {
   opacity: .5;
   cursor: not-allowed;
 }
+/* the quieter, second door (Build #3 — camera only, no mic) */
+#oc-join-door button#oc-join-camera-only {
+  font-family: var(--oc-font-body);
+  font-weight: 500;
+  font-size: 13px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--oc-surface-edge);
+  cursor: pointer;
+  color: var(--oc-text-muted);
+  background: transparent;
+}
+#oc-join-door button#oc-join-camera-only:hover {
+  color: var(--oc-text);
+  border-color: var(--oc-text-muted);
+}
+
 #oc-join-door a.oc-join-more {
   font-size: 12px;
   color: var(--oc-text-muted);
