@@ -244,17 +244,59 @@
 	}
 
 	// ---------------------------------------------------------------
-	// Guest one-click join door (Build #5). Bare ?room=<id> only.
-	// Continues as &webcam&mute&hangupbutton&label=<name>:
-	//   webcam  — main.js:2037 (session.webcamonly)
-	//   mute    — main.js:2229 (guest joins muted; director unmutes)
-	//   hangupbutton — main.js:1943-1944 -> shows #hangupbutton
-	//                  (index.html:291, onclick="hangup()") which was
-	//                  MISSING by default (main.js:1938 nohangupbutton
-	//                  is also off by default, but so is hangupbutton
-	//                  itself unless requested) — this is the Admiral's
-	//                  "join button remained, need a disconnect" fix.
-	//   label   — main.js:3533-3534 (display name)
+	// Guest one-click join door (Build #5, extended TASK-302). Bare
+	// ?room=<id> only.
+	//
+	// Primary door — "Join with camera + mic" — BOTH-OFF ARRIVAL
+	// (TASK-302 Build #1): continues as
+	// &webcam&mute&videomute&hangupbutton&label=<name>:
+	//   webcam       — main.js:2037 (session.webcamonly = true; camera
+	//                  is the capture source, screenshare button hidden)
+	//   mute         — main.js:2229 (urlParams "mute"/"muted"/"m" ->
+	//                  session.muted = true; mic is captured but starts
+	//                  muted)
+	//   videomute    — main.js:2237 (urlParams "videomute"/"videomuted"/
+	//                  "vm" -> session.videoMutedFlag = true; camera is
+	//                  captured but starts off) — TASK-302 addition so
+	//                  the guest arrives with BOTH camera and mic off,
+	//                  not mic-only
+	//   hangupbutton — main.js:1942-1944 (urlParams "hangupbutton"/"hub"/
+	//                  "humb64" -> session.hangupbutton = true) -> shows
+	//                  #hangupbutton (index.html:291, onclick="hangup()")
+	//                  which was MISSING by default (main.js:1938
+	//                  nohangupbutton is also off by default, but so is
+	//                  hangupbutton itself unless requested) — the
+	//                  Admiral's "join button remained, need a
+	//                  disconnect" fix
+	//   label        — main.js:3533-3534 (display name)
+	//
+	// Camera-only door — "Join as a camera only (no mic)" (TASK-302
+	// Build #3 — a second device/phone camera, the call #4 item 7
+	// feedback-loop rule) — continues as
+	// &webcam&audiodevice=0&hangupbutton&label=<name>:
+	//   webcam        — main.js:2037, as above. No &videomute here: the
+	//                   whole point of this door is a LIVE camera, so it
+	//                   arrives ON, not muted.
+	//   audiodevice=0 — main.js:4795-4806 (urlParams "audiodevice"/
+	//                   "adevice"/"ad"/"device"/"d"/"ado"; value "0" /
+	//                   "false" / "no" / "off" -> session.audioDevice =
+	//                   0). PROOF this is a true no-mic join (the mic is
+	//                   never even requested), not just a muted one:
+	//                   previewWebcam() — the same permission-request
+	//                   path the primary door's webcam join runs through
+	//                   — builds `constraint = { audio: false }` when
+	//                   session.audioDevice === 0 (lib.js:49555-49559),
+	//                   and that exact constraint object is what reaches
+	//                   navigator.mediaDevices.getUserMedia() via
+	//                   requestBasicPermissions() (lib.js:49655-49657
+	//                   call site, lib.js:48362+ definition, the
+	//                   getUserMedia call at lib.js:48548-48549) — no
+	//                   microphone permission prompt fires at all.
+	//                   (`&miconly`, main.js:2040-2042, is the OPPOSITE
+	//                   shape — mic captured, camera hidden/videoDevice
+	//                   set to 0 — so it is deliberately NOT used here.)
+	//   hangupbutton / label — as above.
+	//
 	// The five-source picker underneath (container-1..container-6,
 	// index.html:369+) is native and untouched; "More ways to join"
 	// just removes this overlay so it shows through.
@@ -283,10 +325,19 @@
 		h1.textContent = "Join " + (roomInfo ? roomInfo.title : PRODUCT_NAME);
 		door.appendChild(h1);
 
+		// Build #1 — both-off arrival copy (verbatim, brief item 1).
 		var note = document.createElement("p");
 		note.className = "oc-join-note";
-		note.textContent = "One door in: camera + mic. You'll join muted — Love unmutes you when it's your turn.";
+		note.textContent = "You arrive with camera and mic off. Turn them on when you're ready — the host can also unmute you.";
 		door.appendChild(note);
+
+		// Build #2 — the permission line (verbatim, brief item 2; one
+		// line, phone-browser-safe wording — DuckDuckGo denied the
+		// prompt on the call, walk notes item 9).
+		var permission = document.createElement("p");
+		permission.className = "oc-join-permission";
+		permission.textContent = "Allow camera and microphone when your browser asks.";
+		door.appendChild(permission);
 
 		var nameInput = document.createElement("input");
 		nameInput.id = "oc-join-name";
@@ -303,8 +354,15 @@
 
 		var mutedNote = document.createElement("div");
 		mutedNote.className = "oc-join-muted-note";
-		mutedNote.textContent = "Muted on arrival · a Leave button stays on screen once you're in";
+		mutedNote.textContent = "Camera and mic off on arrival · a Leave button stays on screen once you're in";
 		door.appendChild(mutedNote);
+
+		// Build #3 — the quieter camera-only door.
+		var cameraOnly = document.createElement("button");
+		cameraOnly.id = "oc-join-camera-only";
+		cameraOnly.type = "button";
+		cameraOnly.textContent = "Join as a camera only (no mic)";
+		door.appendChild(cameraOnly);
 
 		var more = document.createElement("a");
 		more.className = "oc-join-more";
@@ -312,17 +370,29 @@
 		more.addEventListener("click", function () { door.remove(); });
 		door.appendChild(more);
 
-		function go() {
+		function goPrimary() {
 			var url = new URL(window.location.href);
 			url.searchParams.set("webcam", "");
 			url.searchParams.set("mute", "");
+			url.searchParams.set("videomute", "");
 			url.searchParams.set("hangupbutton", "");
 			var name = nameInput.value.trim();
 			if (name) url.searchParams.set("label", name);
 			window.location.href = url.toString();
 		}
-		primary.addEventListener("click", go);
-		nameInput.addEventListener("keyup", function (e) { if (e.key === "Enter") go(); });
+		primary.addEventListener("click", goPrimary);
+		nameInput.addEventListener("keyup", function (e) { if (e.key === "Enter") goPrimary(); });
+
+		function goCameraOnly() {
+			var url = new URL(window.location.href);
+			url.searchParams.set("webcam", "");
+			url.searchParams.set("audiodevice", "0");
+			url.searchParams.set("hangupbutton", "");
+			var name = nameInput.value.trim();
+			if (name) url.searchParams.set("label", name);
+			window.location.href = url.toString();
+		}
+		cameraOnly.addEventListener("click", goCameraOnly);
 
 		document.body.appendChild(door);
 	}
