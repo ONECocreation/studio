@@ -1,31 +1,32 @@
 {
-  "name": "VDO.Ninja",
-  "short_name": "VDO.Ninja",
-  "description": "Bring live video from your smartphone, computer, or friends directly into your Studio. 100% free.",
+  "_comment": "ONE Cocreation brand layer — TASK-262",
+  "name": "ONE Cocreation — Studio",
+  "short_name": "OC Studio",
+  "description": "Love's studio — join the room, camera and mic in one click.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#fff",
-  "theme_color": "#1a1a1a",
+  "background_color": "#0a0a14",
+  "theme_color": "#0a0a14",
   "orientation": "any",
   "icons": [
     {
-      "src": "media/icon-144x144.png",
+      "src": "brand/images/onecocreation-icon-144x144.png",
       "sizes": "144x144",
       "type": "image/png",
-      "purpose": "any monochrome"
+      "purpose": "any"
     },
     {
-      "src": "media/icon-192x192.png",
+      "src": "brand/images/onecocreation-icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any monochrome"
+      "purpose": "any"
     },
     {
-      "src": "media/icon-512x512.png",
+      "src": "brand/images/onecocreation-icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any monochrome"
+      "purpose": "any"
     }
   ]
 }

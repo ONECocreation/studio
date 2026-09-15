@@ -40,43 +40,48 @@
 		<link rel="manifest" href="manifest.json">
 		
 		<!-- Primary Meta Tags -->
-		<title>VDO.Ninja</title>
-		<meta id="metaTitle" name="title" content="VDO.Ninja" />
-		<meta name="description" content="Bring live video from your smartphone, computer, or friends directly into your Studio. 100% free." />
+		<!-- ONE Cocreation brand layer — TASK-262 -->
+		<title>ONE Cocreation — Studio</title>
+		<meta id="metaTitle" name="title" content="ONE Cocreation — Studio" />
+		<meta name="description" content="Love's studio — join the room, camera and mic in one click. Where Heaven and Earth meet." />
 		<meta name="author" content="Steve Seguin" />
-		
-		
-		<meta name="msapplication-TileColor" content="#da532c" />
-		<meta name="theme-color" content="#0f131d" />
+
+
+		<meta name="msapplication-TileColor" content="#9B26D6" />
+		<meta name="theme-color" content="#0a0a14" />
 		<link rel="stylesheet" href="./main.css?ver=4041" />
+		<!-- ONE Cocreation brand layer — TASK-262: layers over main.css, edits nothing in it -->
+		<link rel="stylesheet" href="./brand/onecocreation.css" />
 		<script type="text/javascript" crossorigin="anonymous" src="./thirdparty/adapter.js"></script>
-		
+
+		<!-- ONE Cocreation brand layer — TASK-262: SVG mark first (modern browsers), PNG/ICO kept as fallback -->
+		<link rel="icon" type="image/svg+xml" href="./brand/images/onecocreation-mark.svg" />
 		<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon" />
-		<link id="favicon1" rel="icon" type="image/png" sizes="32x32" href="./media/favicon-32x32.png" />
-		<link id="favicon2" rel="icon" type="image/png" sizes="16x16" href="./media/favicon-16x16.png" />
+		<link id="favicon1" rel="icon" type="image/png" sizes="32x32" href="./brand/images/onecocreation-icon-32x32.png" />
+		<link id="favicon2" rel="icon" type="image/png" sizes="16x16" href="./brand/images/onecocreation-icon-16x16.png" />
 		<link id="favicon3" rel="icon" href="./media/favicon.ico" />
-		<link id="thumbnailUrl" itemprop="thumbnailUrl" href="./media/vdoNinja_logo_full.png" />
+		<link id="thumbnailUrl" itemprop="thumbnailUrl" href="./brand/images/onecocreation-icon-512x512.png" />
 		<link rel="alternate" type="text/markdown" href="/rawdoc.md" title="Developer and User Documentation">
 
 		<!-- X (Twitter) Card Tags -->
 		<meta name="twitter:card" content="summary_large_image">
 		<meta name="twitter:creator" content="@SteveSeguin">
-		<meta name="twitter:title" content="VDO.Ninja">
-		<meta name="twitter:description" content="Bring live video from your smartphone, computer, or friends directly into OBS Studio or other. 100% free.">
+		<meta name="twitter:title" content="ONE Cocreation — Studio">
+		<meta name="twitter:description" content="Love's studio — join the room, camera and mic in one click.">
 		<meta name="twitter:image" content="https://vdo.ninja/media/vdoNinja_logo_full.png">
-		
+
 		<!-- Open Graph Tags (also used by X) -->
 		<meta property="og:type" content="website">
 		<meta property="og:url" content="https://vdo.ninja/">
-		<meta property="og:title" content="VDO.Ninja">
-		<meta property="og:description" content="Bring live video from your smartphone, computer, or friends directly into OBS Studio or other. 100% free.">
+		<meta property="og:title" content="ONE Cocreation — Studio">
+		<meta property="og:description" content="Love's studio — join the room, camera and mic in one click.">
 		<meta property="og:image" content="https://vdo.ninja/media/vdoNinja_logo_full.png">
 		<meta property="og:image:width" content="1200">
 		<meta property="og:image:height" content="630">
-		<meta property="og:site_name" content="VDO.Ninja">
+		<meta property="og:site_name" content="ONE Cocreation">
 
 		<style id="lightbox-animations" type="text/css"></style>
-		
+
 		<!-- Authentication styles -->
 		<link rel="stylesheet" href="auth-styles.css">
 
@@ -3476,6 +3481,8 @@
 		<script type="text/javascript" crossorigin="anonymous" id="lib-js" src="./lib.js?ver=14171"></script>
 		<script type="text/javascript" crossorigin="anonymous" id="main-js" src="./main.js?ver=1067"></script>
 		<script type="module" src="./podcast/bootstrap.js"></script>
-		
+		<!-- ONE Cocreation brand layer — TASK-262: additive only, runs on window 'load' -->
+		<script type="text/javascript" src="./brand/onecocreation.js"></script>
+
 	</body>
 </html>
