@@ -1,0 +1,7 @@
+{
+  "_comment": "ONE Cocreation brand layer — TASK-262. Room id -> { title, note }. Matched against ?room= or ?director=/&dir=. An id not listed here is shown raw (derive-or-dash) — never invent a name for it.",
+  "onecocreation-studio": {
+    "title": "Heart Field · the studio",
+    "note": "Love's weekly reading room"
+  }
+}

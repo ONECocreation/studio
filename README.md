@@ -1,4 +1,15 @@
 
+## ONE Cocreation brand layer — TASK-262
+
+This fork of VDO.Ninja carries a brand LAYER for Love's studio (vdo.onecocreation.com), not a rewrite:
+new files under `brand/` (`onecocreation.css`, `onecocreation.js`, `rooms.json`, `images/*`) load over
+the stock chrome, and every upstream file touched to load them (`index.html`, `manifest.json`) carries
+a `<!-- ONE Cocreation brand layer — TASK-262 -->` marker at the edit — grep for it before any upstream
+merge. Colours/fonts are copied read-only from `~/dev/onecocreation` (`src/brand/cartridge.ts`,
+`src/lib/brand-onecocreation.ts`); logo assets from its `public/brand/`. Room identity (which room is
+open) is data-only in `brand/rooms.json` — add a room there, never hardcode a name in JS. Full build
+notes: `~/dev/home/outbox/task-262/SUMMARY.md`.
+
 <img src="https://github.com/user-attachments/assets/8134f167-2ea5-42e8-9450-b7aed322b6b0" width="300" />
 
 [![GitHub stars](https://img.shields.io/github/stars/steveseguin/vdoninja?style=social)](https://github.com/steveseguin/vdoninja)

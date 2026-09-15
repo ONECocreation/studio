@@ -1,0 +1,270 @@
+/* ============================================================
+   ONE Cocreation brand layer — TASK-262
+   StudioPac for vdo.onecocreation.com. Colours + fonts copied from
+   the OTHER (read-only) repo:
+     ~/dev/onecocreation/src/brand/cartridge.ts  (love.palette, love.fonts)
+     ~/dev/onecocreation/src/lib/brand-onecocreation.ts (brandCssVars shape)
+   Font: Barlow — Love's display face, no serifs (FONT TRIO, 0018.05.17 a₿).
+   This file is additive only: it layers over main.css, never edits it.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* -- ONE Cocreation tokens (verbatim hexes from cartridge.ts love.palette) -- */
+  --oc-space: #0a0a14;
+  --oc-panel: rgba(22, 18, 40, .66);
+  --oc-edge: rgba(168, 130, 240, .22);
+  --oc-cream: #FBF6EF;
+  --oc-blush: #F3DCE3;
+  --oc-ink: #4A4458;
+  --oc-muted: #897F97;
+  --oc-gold: #D9B24E;       /* MONEY ONLY per house law — not used decoratively here */
+  --oc-gold-deep: #B4862B;
+  --oc-purple: #9B26D6;
+  --oc-magenta: #C42EC9;
+  --oc-lavender: #8B76C4;
+  --oc-rose: #C56E8B;
+  --oc-copper: #C77B4A;
+
+  --oc-font-display: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --oc-font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* -- theme-aware surface tokens for OUR injected elements only.
+     cartridge.ts's own split: space/panel/edge = "celestial dark
+     (header/hero true-to-brand)"; cream/blush/ink/muted = "luminous
+     body". Dark (fork default): celestial. Light (&whitemode,
+     main.css:439 body.whitetheme): luminous body reading. -- */
+  --oc-surface: var(--oc-space);
+  --oc-surface-panel: var(--oc-panel);
+  --oc-surface-edge: var(--oc-edge);
+  --oc-text: var(--oc-cream);
+  --oc-text-muted: var(--oc-muted); /* cartridge's own neutral "muted" token — legible on both surfaces, no invented mapping */
+}
+
+/* body.whitetheme is the fork's OWN explicit light theme (main.css:439;
+   only ever added via &whitemode/&whitetheme, main.js:4723-4726 — NOT
+   automatic from OS prefers-color-scheme, main.js:4728-4735 only
+   toggles .darktheme). Flip our tokens to the cartridge's light half
+   so our banner/hints/join-door read as ONE Cocreation in both. */
+body.whitetheme {
+  --oc-surface: var(--oc-cream);
+  --oc-surface-panel: #ffffffcc;
+  --oc-surface-edge: rgba(74, 68, 88, .18);
+  --oc-text: var(--oc-ink);
+  --oc-text-muted: var(--oc-muted);
+}
+
+/* -- re-skin the fork's own accent variables (main.css:1,7172-7185) so
+   native buttons/sliders/menus pick up OC colour without us re-styling
+   each one. --background-color is scoped to the DARK state only —
+   body.whitetheme already sets its own white body background
+   (main.css:439) and we don't fight it, so &whitemode stays genuinely
+   light instead of a dark/light mix. */
+:root {
+  --accent-color: var(--oc-purple) !important;
+  --accent-hover-color: var(--oc-magenta) !important;
+}
+body:not(.whitetheme) {
+  --background-color: var(--oc-space) !important;
+}
+
+body {
+  font-family: var(--oc-font-body);
+}
+
+/* ---------------------------------------------------------------
+   Header lockup — brand.js swaps #logoname's inner content; this
+   just sizes/positions the injected mark + wordmark.
+   --------------------------------------------------------------- */
+#oc-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  vertical-align: middle;
+}
+#oc-lockup img {
+  height: 26px;
+  width: auto;
+  display: block;
+}
+#oc-lockup span {
+  font-family: var(--oc-font-display);
+  font-weight: 700;
+  letter-spacing: .01em;
+  font-size: 15px;
+  color: var(--oc-cream); /* the header bar itself stays celestial-dark in both themes (main.css:7581 #header, hardcoded) */
+  white-space: nowrap;
+}
+#oc-lockup span small {
+  display: block;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--oc-lavender);
+}
+
+/* ---------------------------------------------------------------
+   Room identity banner — "which room am I opening" (Build #2)
+   Mounted both in #header-adjacent chrome (always dark, see above)
+   and inside the join-door overlay, which DOES flip with theme —
+   so this component uses the theme-aware --oc-surface-* tokens.
+   --------------------------------------------------------------- */
+#oc-room-banner {
+  position: relative;
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--oc-surface);
+  border-bottom: 1px solid var(--oc-surface-edge);
+  color: var(--oc-text);
+  font-family: var(--oc-font-body);
+}
+#oc-room-banner .oc-room-eyebrow {
+  font-family: var(--oc-font-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .04em;
+  color: var(--oc-text);
+}
+#oc-room-banner .oc-room-note {
+  font-size: 12px;
+  color: var(--oc-text-muted);
+}
+#oc-room-banner .oc-room-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--oc-rose);
+  flex: none;
+}
+
+/* ---------------------------------------------------------------
+   Director hint strip (Build #3) — the director dashboard itself
+   (#directorlayout) is not theme-switched by the fork's own CSS in
+   any special way beyond the shared --background-color var, so this
+   strip follows the same theme-aware tokens.
+   --------------------------------------------------------------- */
+#oc-director-hints {
+  position: relative;
+  z-index: 19999;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  padding: 6px 16px;
+  background: var(--oc-surface-panel);
+  border-bottom: 1px solid var(--oc-surface-edge);
+  font-family: var(--oc-font-body);
+  font-size: 12px;
+  color: var(--oc-text-muted);
+}
+#oc-director-hints b {
+  font-family: var(--oc-font-display);
+  color: var(--oc-text);
+  font-weight: 600;
+}
+#oc-director-hints .oc-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  border-bottom: 1px dotted var(--oc-text-muted);
+}
+#oc-director-hints .oc-hint:hover {
+  color: var(--oc-text);
+}
+
+/* ---------------------------------------------------------------
+   Guest one-click join door (Build #5) — full-screen overlay, so it
+   is the one surface where the theme flip is most visible.
+   --------------------------------------------------------------- */
+#oc-join-door {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px;
+  background: var(--oc-surface);
+  font-family: var(--oc-font-body);
+  color: var(--oc-text);
+  text-align: center;
+}
+#oc-join-door img.oc-join-mark {
+  width: 84px;
+  height: 84px;
+}
+#oc-join-door h1 {
+  font-family: var(--oc-font-display);
+  font-weight: 700;
+  font-size: 22px;
+  margin: 0;
+  color: var(--oc-text);
+}
+#oc-join-door p.oc-join-note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--oc-text-muted);
+  max-width: 380px;
+}
+#oc-join-door input#oc-join-name {
+  width: 260px;
+  max-width: 80vw;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--oc-surface-edge);
+  background: var(--oc-surface-panel);
+  color: var(--oc-text);
+  font-family: var(--oc-font-body);
+  font-size: 14px;
+}
+#oc-join-door input#oc-join-name::placeholder {
+  color: var(--oc-text-muted);
+}
+#oc-join-door button#oc-join-primary {
+  font-family: var(--oc-font-display);
+  font-weight: 600;
+  font-size: 15px;
+  padding: 12px 28px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  color: var(--oc-space);
+  background: linear-gradient(120deg, var(--oc-rose), var(--oc-purple));
+  box-shadow: 0 6px 24px rgba(155, 38, 214, .35);
+}
+#oc-join-door button#oc-join-primary:hover {
+  filter: brightness(1.08);
+}
+#oc-join-door button#oc-join-primary:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+#oc-join-door a.oc-join-more {
+  font-size: 12px;
+  color: var(--oc-text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+#oc-join-door .oc-join-muted-note {
+  font-size: 11px;
+  color: var(--oc-text-muted);
+}
+
+/* ---------------------------------------------------------------
+   Quiet AGPL/source line brand.js appends into #credits
+   --------------------------------------------------------------- */
+.oc-quiet-credit {
+  opacity: .55;
+  font-size: 11px;
+}
+.oc-quiet-credit a {
+  color: inherit;
+}
