@@ -433,6 +433,33 @@
 	// session`) so this line only ever appears on a link that actually
 	// carries `&showconnections`; it never shows a placeholder on a
 	// link that doesn't.
+	//
+	// "Director is here" — LIVE two-tab verification (TASK-336
+	// SUMMARY.md has the full run) found a real signal, but a
+	// different one than Ground speculated: a bare `?director=<room>`
+	// join (NO `&showdirector` needed — tried both ways, identical
+	// result) gets tagged over the fork's OWN signaling exchange, so
+	// on every OTHER peer's own client `session.rpcs[UUID].director`
+	// reads `true` for that connection the moment it's live, and
+	// `session.rpcs[UUID]` is deleted outright when that peer
+	// disconnects (verified: it drops out of `Object.keys(session.
+	// rpcs)` within ~8s of the director's tab closing). There is no
+	// DOM tile to key off here — a guest without `&showdirector` never
+	// gets a video element for the director at all (lib.js:5541-5548,
+	// `if (session.directorList.includes(UUID) || session.rpcs[UUID].
+	// director) { if (session.showDirector || session.rpcs[UUID].
+	// showDirector) { /* render */ } else { return; } }` — this
+	// GUEST's own `session.showDirector` is false and `session.rpcs
+	// [UUID].showDirector` is never set from the wire (grepped: `.
+	// showDirector` is only ever WRITTEN into an outgoing `settings`
+	// object, lib.js:6945/28780, never read back off an incoming one —
+	// a one-way/dead field), so the early return fires and nothing
+	// renders). `session.rpcs[UUID].director`, by contrast, IS live and
+	// accurate — confirmed present with both `&showdirector` on and off
+	// the director's link. We deliberately do NOT key off `session.
+	// directorList`: verified it does NOT get pruned when the director
+	// disconnects (stale UUID still present after departure in testing)
+	// — `session.rpcs` is the one that actually clears.
 	// ---------------------------------------------------------------
 	function mountStatusLine() {
 		pollUntil(function () {
@@ -449,6 +476,14 @@
 			countEl.className = "oc-status-count";
 			countEl.textContent = "connecting…";
 			line.appendChild(countEl);
+
+			var directorEl = document.createElement("span");
+			directorEl.id = "oc-status-director";
+			directorEl.className = "oc-status-director";
+			directorEl.textContent = "Director is here";
+			directorEl.hidden = true;
+			line.appendChild(directorEl);
+
 			header.appendChild(line);
 
 			function readConnectionCount() {
@@ -462,12 +497,22 @@
 				return total;
 			}
 
-			function updateCount() {
+			function directorPresent() {
+				if (!(window.session && window.session.rpcs)) return false;
+				var uuids = Object.keys(window.session.rpcs);
+				for (var i = 0; i < uuids.length; i++) {
+					if (window.session.rpcs[uuids[i]] && window.session.rpcs[uuids[i]].director === true) return true;
+				}
+				return false;
+			}
+
+			function updateStatus() {
 				var n = readConnectionCount();
 				countEl.textContent = (n === null ? 0 : n) + " connected";
+				directorEl.hidden = !directorPresent();
 			}
-			updateCount();
-			setInterval(updateCount, 1000);
+			updateStatus();
+			setInterval(updateStatus, 1000);
 			return true;
 		}, 20, 250);
 	}

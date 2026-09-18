@@ -305,6 +305,34 @@ body {
   padding: 3px 10px;
   white-space: nowrap;
 }
+/* text-safe, no color-only meaning: the WORD "Director is here" is the
+   signal, not a colour swap -- a dot is decorative only, never load-bearing */
+#oc-status-line .oc-status-director {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--oc-cream);
+  background: var(--oc-panel);
+  border: 1px solid var(--oc-rose);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+#oc-status-line .oc-status-director::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--oc-rose);
+  flex: none;
+}
+#oc-status-line .oc-status-director[hidden] {
+  display: none;
+}
 
 /* ---------------------------------------------------------------
    Quiet AGPL/source line brand.js appends into #credits
