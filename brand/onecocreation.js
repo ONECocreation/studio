@@ -398,6 +398,81 @@
 	}
 
 	// ---------------------------------------------------------------
+	// Host-presence status line (TASK-336). Love's ask: an honest
+	// connection count, always, in the guest/host view.
+	//
+	// "N connected" mirrors the fork's OWN native connectionDetails
+	// element — never a reinvented stat. That element only exists once
+	// `&showconnections` is on THIS client's own URL (main.js:3444-3445,
+	// `session.showConnections = true`); it is created/updated per
+	// REMOTE peer this client is connected to, one per visible video
+	// tile, class "rem-con-count" (lib.js:16435-16443
+	// createConnectionDetailsEle — id "remoteConnections_"+UUID, title
+	// "viewer-count"), value written at lib.js:56884-56886 from
+	// `session.rpcs[UUID].stats.info.total_outbound_p2p_connections` —
+	// "the count of P2P viewer connections to a given publisher's own
+	// stream" (brief Ground). Also rendered live at lib.js:9898,
+	// lib.js:30394, lib.js:30737 (all three gated on the same
+	// `session.showConnections`).
+	//
+	// A room can hold more than one visible remote tile (director +
+	// several guests), so more than one ".rem-con-count" badge can
+	// exist at once — each one the fork's own tracked count for that
+	// one stream. We SUM the badges currently on the page rather than
+	// pick one arbitrarily; in the studio's actual 1 director + 1 guest
+	// shape (rooms.json: "Love's weekly reading room") there is
+	// ordinarily exactly one badge, so the sum equals that single
+	// native value untouched. Never split into "watching" vs
+	// "listening" — this fork does not track that distinction anywhere
+	// (grepped `connectionDetails`/`stats.info`, brief Ground) — "N
+	// connected" only.
+	//
+	// Gated on `window.session.showConnections` itself (the same global
+	// `session` object main.js/lib.js already maintain — `var session`
+	// at lib.js:263 top level, no module wrapper, so it is `window.
+	// session`) so this line only ever appears on a link that actually
+	// carries `&showconnections`; it never shows a placeholder on a
+	// link that doesn't.
+	// ---------------------------------------------------------------
+	function mountStatusLine() {
+		pollUntil(function () {
+			if (byId("oc-status-line")) return true;
+			if (!(window.session && window.session.showConnections)) return false;
+
+			var header = byId("header"); // index.html:102, present in every room/call view (director dashboard and guest in-call alike)
+			if (!header) return false;
+
+			var line = document.createElement("div");
+			line.id = "oc-status-line";
+			var countEl = document.createElement("span");
+			countEl.id = "oc-status-count";
+			countEl.className = "oc-status-count";
+			countEl.textContent = "connecting…";
+			line.appendChild(countEl);
+			header.appendChild(line);
+
+			function readConnectionCount() {
+				var badges = document.querySelectorAll(".rem-con-count");
+				if (!badges.length) return null; // nothing tracked yet -- never guess a number
+				var total = 0;
+				badges.forEach(function (b) {
+					var v = parseInt(b.dataset.value, 10);
+					if (!isNaN(v)) total += v;
+				});
+				return total;
+			}
+
+			function updateCount() {
+				var n = readConnectionCount();
+				countEl.textContent = (n === null ? 0 : n) + " connected";
+			}
+			updateCount();
+			setInterval(updateCount, 1000);
+			return true;
+		}, 20, 250);
+	}
+
+	// ---------------------------------------------------------------
 	// boot
 	// ---------------------------------------------------------------
 	function boot() {
@@ -409,8 +484,15 @@
 					mountDirectorExtras(roomInfo);
 					return true;
 				}, 30, 200);
+				mountStatusLine();
 			} else if (isBareGuestJoin) {
 				mountJoinDoor(roomInfo);
+			} else if (effectiveRoomId) {
+				// in-call guest view (post-join-door redirect, a source
+				// param like &webcam is now present) -- the join door
+				// itself never shows a live count before a connection
+				// exists, so this branch is the guest's actual call view.
+				mountStatusLine();
 			}
 		});
 	}
