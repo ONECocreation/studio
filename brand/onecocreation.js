@@ -398,73 +398,70 @@
 	}
 
 	// ---------------------------------------------------------------
-	// Host-presence status line (TASK-336). Love's ask: an honest
-	// connection count, always, in the guest/host view.
+	// Host-presence status line (TASK-336, revised on Number One's
+	// send-back). Love's ask, precisely: "who/how many are connected to
+	// ME right now" -- not a reading of the native per-tile viewer
+	// badge, which double-counts in a multi-guest room and reads "0"
+	// for the common lone-guest case while "Director is here" shows
+	// beside it (self-contradicting -- the first cut of this line got
+	// this wrong; see brief-lane SUMMARY.md for the full correction).
 	//
-	// "N connected" mirrors the fork's OWN native connectionDetails
-	// element — never a reinvented stat. That element only exists once
-	// `&showconnections` is on THIS client's own URL (main.js:3444-3445,
-	// `session.showConnections = true`); it is created/updated per
-	// REMOTE peer this client is connected to, one per visible video
-	// tile, class "rem-con-count" (lib.js:16435-16443
-	// createConnectionDetailsEle — id "remoteConnections_"+UUID, title
-	// "viewer-count"), value written at lib.js:56884-56886 from
-	// `session.rpcs[UUID].stats.info.total_outbound_p2p_connections` —
-	// "the count of P2P viewer connections to a given publisher's own
-	// stream" (brief Ground). Also rendered live at lib.js:9898,
-	// lib.js:30394, lib.js:30737 (all three gated on the same
-	// `session.showConnections`).
+	// "N others here" / "no one else here yet" / "connecting…" — the
+	// count of DISTINCT peer UUIDs in the union of `session.pcs`
+	// (peers receiving MY stream) and `session.rpcs` (peers I'm
+	// connected to). Both are the fork's own live peer-connection
+	// registries, not reinvented: LIVE-VERIFIED (3 tabs -- director +
+	// 2 guests, puppeteer, port 4486, TASK-336 SUMMARY.md has the full
+	// run) that in this fork's mesh topology `pcs` and `rpcs` hold the
+	// IDENTICAL UUID set for every peer relationship observed (each
+	// peer counted once in each dict, same UUID key both places) — so
+	// summing badge VALUES (the first cut's mistake) double-counts,
+	// but a UUID-keyed set union never can, by construction, regardless
+	// of whether pcs/rpcs ever diverge (a one-way WHEP-style peer would
+	// still only be counted once). Both dicts were verified to PRUNE
+	// the UUID entirely on that peer's departure (not just null a
+	// property) within ~10s in every run.
 	//
-	// A room can hold more than one visible remote tile (director +
-	// several guests), so more than one ".rem-con-count" badge can
-	// exist at once — each one the fork's own tracked count for that
-	// one stream. We SUM the badges currently on the page rather than
-	// pick one arbitrarily; in the studio's actual 1 director + 1 guest
-	// shape (rooms.json: "Love's weekly reading room") there is
-	// ordinarily exactly one badge, so the sum equals that single
-	// native value untouched. Never split into "watching" vs
-	// "listening" — this fork does not track that distinction anywhere
-	// (grepped `connectionDetails`/`stats.info`, brief Ground) — "N
-	// connected" only.
+	// The general (non-WHEP) creation/deletion of `pcs[UUID]`/
+	// `rpcs[UUID]` for ordinary room peers is NOT in lib.js — grepped
+	// exhaustively, lib.js only ever manipulates NESTED properties of
+	// an already-existing entry (e.g. `delete session.rpcs[UUID].
+	// stats[...]`), never the whole top-level UUID key. It lives in the
+	// obfuscated `webrtc.js` (also brand-layer READ-ONLY, never
+	// touched): `webrtc.js:9` (the entire bundle is one minified line)
+	// near the `onGuestLeftMixMinus(...)` call does `delete _0x235e3c[
+	// 'rpcs'][UUID]` on a peer's departure, and a `pcs[UUID]` deletion
+	// sits nearby in the same departure cleanup; creation is two `=
+	// new RTCPeerConnection(...)` assignments into `pcs[UUID]` and
+	// `rpcs[UUID]` respectively, found via the shared hex string-table
+	// index each site reuses for the literal 'pcs'/'rpcs' property
+	// name. This is a live-code-reading citation, not a hand-trace —
+	// the actual proof this lane relies on is the runtime behaviour
+	// above (Object.keys(...) before/after each departure), not this
+	// source dig, since the file cannot be meaningfully line-cited
+	// beyond "the one line it all lives on."
 	//
-	// Gated on `window.session.showConnections` itself (the same global
-	// `session` object main.js/lib.js already maintain — `var session`
-	// at lib.js:263 top level, no module wrapper, so it is `window.
-	// session`) so this line only ever appears on a link that actually
-	// carries `&showconnections`; it never shows a placeholder on a
-	// link that doesn't.
+	// `session.rpcs[UUID].director === true` for the SAME shared
+	// director-tagging as before (unchanged from the prior cut, still
+	// live-verified in the 3-tab run: the two guests' own `rpcs` each
+	// correctly tag ONLY the director's UUID `true` and the other
+	// guest's UUID `null`/absent -- never mistags a fellow guest as the
+	// director). `session.rpcs` is still the one keyed off for THIS,
+	// not `session.directorList` (still verified NOT pruned on
+	// departure -- unchanged finding from the prior cut).
 	//
-	// "Director is here" — LIVE two-tab verification (TASK-336
-	// SUMMARY.md has the full run) found a real signal, but a
-	// different one than Ground speculated: a bare `?director=<room>`
-	// join (NO `&showdirector` needed — tried both ways, identical
-	// result) gets tagged over the fork's OWN signaling exchange, so
-	// on every OTHER peer's own client `session.rpcs[UUID].director`
-	// reads `true` for that connection the moment it's live, and
-	// `session.rpcs[UUID]` is deleted outright when that peer
-	// disconnects (verified: it drops out of `Object.keys(session.
-	// rpcs)` within ~8s of the director's tab closing). There is no
-	// DOM tile to key off here — a guest without `&showdirector` never
-	// gets a video element for the director at all (lib.js:5541-5548,
-	// `if (session.directorList.includes(UUID) || session.rpcs[UUID].
-	// director) { if (session.showDirector || session.rpcs[UUID].
-	// showDirector) { /* render */ } else { return; } }` — this
-	// GUEST's own `session.showDirector` is false and `session.rpcs
-	// [UUID].showDirector` is never set from the wire (grepped: `.
-	// showDirector` is only ever WRITTEN into an outgoing `settings`
-	// object, lib.js:6945/28780, never read back off an incoming one —
-	// a one-way/dead field), so the early return fires and nothing
-	// renders). `session.rpcs[UUID].director`, by contrast, IS live and
-	// accurate — confirmed present with both `&showdirector` on and off
-	// the director's link. We deliberately do NOT key off `session.
-	// directorList`: verified it does NOT get pruned when the director
-	// disconnects (stale UUID still present after departure in testing)
-	// — `session.rpcs` is the one that actually clears.
+	// No longer gated on `&showconnections` / `window.session.
+	// showConnections` -- this line no longer reads anything that flag
+	// controls (the native `.rem-con-count` DOM badge is untouched by
+	// this fork now; TASK-336's OC-site half correspondingly drops
+	// `&showconnections` from both links -- see that repo's SUMMARY).
+	// Only gated on `window.session` existing at all, so a guest never
+	// sees a fabricated "0" in the brief instant before `session` is
+	// even constructed.
 	// ---------------------------------------------------------------
 	function mountStatusLine() {
 		pollUntil(function () {
 			if (byId("oc-status-line")) return true;
-			if (!(window.session && window.session.showConnections)) return false;
 
 			var header = byId("header"); // index.html:102, present in every room/call view (director dashboard and guest in-call alike)
 			if (!header) return false;
@@ -486,15 +483,12 @@
 
 			header.appendChild(line);
 
-			function readConnectionCount() {
-				var badges = document.querySelectorAll(".rem-con-count");
-				if (!badges.length) return null; // nothing tracked yet -- never guess a number
-				var total = 0;
-				badges.forEach(function (b) {
-					var v = parseInt(b.dataset.value, 10);
-					if (!isNaN(v)) total += v;
-				});
-				return total;
+			function distinctPeerCount() {
+				if (!window.session) return null; // session not constructed yet -- never guess
+				var seen = {};
+				Object.keys(window.session.pcs || {}).forEach(function (u) { seen[u] = true; });
+				Object.keys(window.session.rpcs || {}).forEach(function (u) { seen[u] = true; });
+				return Object.keys(seen).length;
 			}
 
 			function directorPresent() {
@@ -507,8 +501,14 @@
 			}
 
 			function updateStatus() {
-				var n = readConnectionCount();
-				countEl.textContent = (n === null ? 0 : n) + " connected";
+				var n = distinctPeerCount();
+				if (n === null) {
+					countEl.textContent = "connecting…";
+				} else if (n === 0) {
+					countEl.textContent = "no one else here yet";
+				} else {
+					countEl.textContent = n + (n === 1 ? " other here" : " others here");
+				}
 				directorEl.hidden = !directorPresent();
 			}
 			updateStatus();
