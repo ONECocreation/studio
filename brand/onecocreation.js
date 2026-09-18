@@ -34,8 +34,17 @@
 	// params VDO recognises (main.js:2037 webcam/wc/miconly,
 	// main.js:2058 screenshare/ss, main.js:2065 fileshare/fs,
 	// main.js:2076 website/iframe, main.js:2085 framegrab) and not a
-	// director/view/push link.
-	var sourceParams = ["webcam", "wc", "miconly", "screenshare", "ss", "fileshare", "fs", "website", "iframe", "framegrab", "push", "view", "permaid"];
+	// director/view/push/SCENE link. "scene" added here TASK-338 --
+	// LIVE-CAUGHT BUG (this lane's own rig screenshot): without it, a
+	// scene-viewer URL (`?scene=<n>&room=<r>`, this lane's own preview
+	// iframe src) was mis-classified as a bare guest join and got OUR
+	// OWN mountJoinDoor() overlay slapped on top of the composited
+	// video instead of showing the scene -- `&scene` is every bit as
+	// much a real VDO view-mode param as `&view` (already in this
+	// list) is (rawdoc.md:9098-9103), it was just missing from this
+	// pre-existing array (T-262/T-302, unrelated to this lane's own
+	// new code, but this file is this lane's to fix).
+	var sourceParams = ["webcam", "wc", "miconly", "screenshare", "ss", "fileshare", "fs", "website", "iframe", "framegrab", "push", "view", "permaid", "scene"];
 	var hasSourceParam = sourceParams.some(function (p) { return params.has(p); });
 	var isBareGuestJoin = !isDirectorMode && !!roomId && !hasSourceParam;
 
@@ -230,6 +239,259 @@
 			var span = byId("highlightDirectorSpan"); // index.html:2851
 			if (span) { span.scrollIntoView({ behavior: "smooth", block: "center" }); flash(span); }
 		});
+	}
+
+	// ---------------------------------------------------------------
+	// Scenes strip (TASK-338), director dashboard ONLY: preview-then-
+	// select, browser-only "go live" with no OBS. Love's ask, verbatim:
+	// "the director view gives love the ability to change scenes. we
+	// want to show her a preview and then allow her to select it and
+	// run it live from the vdo site if possible without obs."
+	//
+	// A "scene" here is the fork's own numbered &scene=N layout
+	// (rawdoc.md:9098-9103) — 0 is the always-on auto full mix, 1-8 are
+	// director-populated (native buttons: addToScene data-scene="1"/
+	// "2" at index.html:1941/1957, the S3..S8 row at index.html:1965-
+	// 1986). No scene-count constant exists anywhere in this fork's own
+	// JS (grepped: `grep -n "scene" brand/onecocreation.js` before this
+	// change returned only an unrelated comment) — "in use" cannot be
+	// cheaply detected from the brand layer alone, so a fixed 0-8 strip
+	// is the named, honest default (CUT NOTE, 0018.06.28 a₿).
+	//
+	// A scene's composited output is itself a normal viewable VDO page
+	// — verified base, same `&cleanoutput` (studio/app.js:302) and
+	// `&password` fold (lib.js:27981-27989, the shape OC's own
+	// live-links.ts `withRoomKey` already relies on) this director's
+	// OWN url already carries:
+	//   index.html?scene=<n>&room=<effectiveRoomId>&cleanoutput&autostart[&password=<key>]
+	//
+	// "Make this live": the director page cannot reload an arbitrary
+	// OTHER tab it doesn't hold a live reference to. window.open(url,
+	// "oc-broadcast") is the one call that does open/switch/reopen all
+	// at once, natively: the first call with that target name opens a
+	// fresh tab; a second call with the SAME name re-navigates that
+	// same tab in place if it's still open; if that tab was closed (or
+	// the browser's internal reference to it has gone stale) the
+	// browser just creates a brand-new one under the same name — so
+	// "open the broadcast tab" and "make scene N live" are literally
+	// the same one-line call, and the tab-closed fallback needs no
+	// special-case code at all. Only the pop-up-BLOCKED case needs an
+	// explicit fallback (window.open returns null instead of a window)
+	// — handled below with a visible inline notice plus a plain <a
+	// href target="oc-broadcast"> the operator can click directly,
+	// never a silent no-op.
+	// ---------------------------------------------------------------
+	var SCENE_IDS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+	var BROADCAST_WINDOW_NAME = "oc-broadcast";
+
+	function sceneUrl(sceneId) {
+		var url = new URL("index.html", window.location.href);
+		url.searchParams.set("scene", String(sceneId));
+		if (effectiveRoomId) url.searchParams.set("room", effectiveRoomId);
+		url.searchParams.set("cleanoutput", "");
+		url.searchParams.set("autostart", "");
+		// same &password this director's own URL carries, if any (TASK-305
+		// shape, live-links.ts withRoomKey) -- every door into a keyed
+		// room must carry the same key or it lands in a different room.
+		var pw = params.get("password");
+		if (pw) url.searchParams.set("password", pw);
+		return url.href;
+	}
+
+	function sceneLabel(sceneId) {
+		return sceneId === 0 ? "Scene 0 · full mix" : "Scene " + sceneId;
+	}
+
+	// Same-origin iframe (the scene URL shares this page's origin) --
+	// its own <video> elements can be reached directly. LIVE-VERIFIED
+	// this is load-bearing, not a defensive no-op (rig probe, fine-
+	// grain 75ms samples): Chrome never actually BLOCKS autoplay of
+	// this fork's WebRTC <video srcObject> elements, muted or not --
+	// no documented viewer-side &mute param exists either way (&mute,
+	// main.js:2229, is PUBLISH-side only) -- but the fork swaps in its
+	// REAL video element (replacing an initial muted placeholder) UN-
+	// MUTED by default once the stream attaches, which is wrong for an
+	// on-demand PREVIEW thumbnail (the brief's own worry: several of
+	// these could be open at once). This loop is what keeps a preview
+	// silent: it re-asserts .muted = true within one poll tick of that
+	// swap. Measured live: the unmuted instant lasts under one tick
+	// (~75ms observed at a 75ms probe cadence) before being caught --
+	// polled at 50ms here (tighter than the probe) to keep that gap as
+	// small as practical without a MutationObserver, which is a
+	// reasonable reach item if a zero-gap guarantee is ever needed.
+	function forceMutedAutoplay(iframe) {
+		var tries = 120; // ~6s at 50ms
+		function tick() {
+			tries--;
+			var doc = null;
+			try { doc = iframe.contentDocument; } catch (e) { /* cross-origin, shouldn't happen -- same host */ }
+			if (doc) {
+				var vids = doc.querySelectorAll("video");
+				for (var i = 0; i < vids.length; i++) {
+					var v = vids[i];
+					if (!v.muted) v.muted = true;
+					if (v.paused) {
+						var p = v.play();
+						if (p && p.catch) p.catch(function () {});
+					}
+				}
+			}
+			if (tries > 0 && iframe.isConnected) setTimeout(tick, 50);
+		}
+		tick();
+	}
+
+	function mountScenesStrip() {
+		var dash = byId("directorlayout");
+		if (!dash) return;
+		if (byId("oc-scenes-strip")) return; // already mounted
+
+		var strip = document.createElement("div");
+		strip.id = "oc-scenes-strip";
+
+		var header = document.createElement("div");
+		header.id = "oc-scenes-header";
+		var title = document.createElement("b");
+		title.textContent = "Scenes";
+		header.appendChild(title);
+		var hint = document.createElement("span");
+		hint.className = "oc-scenes-hint";
+		hint.textContent = "Preview a scene, then make it live in one browser tab — no OBS.";
+		header.appendChild(hint);
+		var openBtn = document.createElement("button");
+		openBtn.id = "oc-scenes-open-broadcast";
+		openBtn.type = "button";
+		openBtn.textContent = "Open broadcast tab (scene 0)";
+		header.appendChild(openBtn);
+		strip.appendChild(header);
+
+		var notice = document.createElement("div");
+		notice.id = "oc-scenes-notice";
+		notice.hidden = true;
+		strip.appendChild(notice);
+
+		var list = document.createElement("div");
+		list.id = "oc-scenes-list";
+		strip.appendChild(list);
+
+		var liveSceneId = null;
+		var openPreviewId = null;
+		var previewButtons = {};
+
+		function setNotice(html) {
+			notice.innerHTML = html;
+			notice.hidden = false;
+		}
+		function clearNotice() {
+			notice.hidden = true;
+			notice.innerHTML = "";
+		}
+
+		function renderState() {
+			SCENE_IDS.forEach(function (id) {
+				var liveTag = byId("oc-scene-live-" + id);
+				if (liveTag) liveTag.hidden = liveSceneId !== id;
+				var btn = previewButtons[id];
+				if (btn) btn.textContent = openPreviewId === id ? "Hide preview" : "Preview";
+			});
+		}
+
+		function goLive(sceneId) {
+			var url = sceneUrl(sceneId);
+			var win = null;
+			try {
+				win = window.open(url, BROADCAST_WINDOW_NAME);
+			} catch (e) {
+				win = null;
+			}
+			if (!win) {
+				setNotice(
+					"Your browser blocked the pop-up. <a href=\"" + escapeHtml(url) + "\" target=\"" + BROADCAST_WINDOW_NAME + "\">Click here to open " + escapeHtml(sceneLabel(sceneId)) + " in the broadcast tab</a>, or allow pop-ups for this site and press “Make this live” again."
+				);
+				return;
+			}
+			try { win.focus(); } catch (e) { /* cross-window focus can throw in some sandboxes -- non-fatal */ }
+			clearNotice();
+			liveSceneId = sceneId;
+			renderState();
+		}
+
+		function togglePreview(sceneId, slotEl) {
+			if (openPreviewId === sceneId) {
+				slotEl.innerHTML = "";
+				openPreviewId = null;
+				renderState();
+				return;
+			}
+			// One preview at a time -- "preview cost is real": each
+			// iframe is a full viewer pulling every stream in that
+			// scene (CUT NOTE). Close whatever else is open first.
+			if (openPreviewId !== null) {
+				var prevSlot = byId("oc-scene-preview-" + openPreviewId);
+				if (prevSlot) prevSlot.innerHTML = "";
+			}
+			openPreviewId = sceneId;
+			var iframe = document.createElement("iframe");
+			iframe.className = "oc-scene-preview-frame";
+			iframe.setAttribute("allow", "autoplay");
+			iframe.src = sceneUrl(sceneId);
+			slotEl.innerHTML = "";
+			slotEl.appendChild(iframe);
+			forceMutedAutoplay(iframe);
+			renderState();
+		}
+
+		openBtn.addEventListener("click", function () { goLive(0); });
+
+		SCENE_IDS.forEach(function (id) {
+			var chip = document.createElement("div");
+			chip.className = "oc-scene-chip";
+			chip.id = "oc-scene-chip-" + id;
+
+			var row = document.createElement("div");
+			row.className = "oc-scene-chip-row";
+			var label = document.createElement("span");
+			label.className = "oc-scene-label";
+			label.textContent = sceneLabel(id);
+			row.appendChild(label);
+			var liveTag = document.createElement("span");
+			liveTag.className = "oc-scene-live-tag";
+			liveTag.id = "oc-scene-live-" + id;
+			liveTag.textContent = "LIVE";
+			liveTag.hidden = true;
+			row.appendChild(liveTag);
+			chip.appendChild(row);
+
+			var actions = document.createElement("div");
+			actions.className = "oc-scene-chip-actions";
+			var previewBtn = document.createElement("button");
+			previewBtn.type = "button";
+			previewBtn.className = "oc-scene-preview-btn";
+			previewBtn.textContent = "Preview";
+			actions.appendChild(previewBtn);
+			var liveBtn = document.createElement("button");
+			liveBtn.type = "button";
+			liveBtn.className = "oc-scene-golive-btn";
+			liveBtn.textContent = "Make this live";
+			actions.appendChild(liveBtn);
+			chip.appendChild(actions);
+
+			var slot = document.createElement("div");
+			slot.className = "oc-scene-preview-slot";
+			slot.id = "oc-scene-preview-" + id;
+			chip.appendChild(slot);
+
+			previewButtons[id] = previewBtn;
+			previewBtn.addEventListener("click", function () { togglePreview(id, slot); });
+			liveBtn.addEventListener("click", function () { goLive(id); });
+
+			list.appendChild(chip);
+		});
+
+		// Mounted right after the T-302/T-336 banner+hints -- both are
+		// inserted earlier in this same pollUntil callback in boot(),
+		// so dash.children[2] is the first original (native) child.
+		dash.insertBefore(strip, dash.children[2] || null);
 	}
 
 	function flash(el) {
@@ -527,6 +789,7 @@
 				pollUntil(function () {
 					if (!byId("directorlayout")) return false;
 					mountDirectorExtras(roomInfo);
+					mountScenesStrip(); // TASK-338, director dashboard only -- never a guest view
 					return true;
 				}, 30, 200);
 				mountStatusLine();

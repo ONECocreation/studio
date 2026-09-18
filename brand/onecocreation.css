@@ -335,6 +335,168 @@ body {
 }
 
 /* ---------------------------------------------------------------
+   Scenes strip (TASK-338) — mounted inside #directorlayout, right
+   after the T-336/T-302 banner+hints (director dashboard only, never
+   in a guest view). Theme-aware tokens, same as the hint strip above.
+   Legibility law: which scene is live is the WORD "LIVE" on its chip,
+   never colour alone; the chip's border tint is decorative-only.
+   --------------------------------------------------------------- */
+#oc-scenes-strip {
+  position: relative;
+  z-index: 19998;
+  padding: 10px 16px 14px;
+  background: var(--oc-surface-panel);
+  border-bottom: 1px solid var(--oc-surface-edge);
+  font-family: var(--oc-font-body);
+  color: var(--oc-text-muted);
+}
+#oc-scenes-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+#oc-scenes-header b {
+  font-family: var(--oc-font-display);
+  color: var(--oc-text);
+  font-weight: 600;
+  font-size: 13px;
+}
+#oc-scenes-header .oc-scenes-hint {
+  font-size: 11px;
+  color: var(--oc-text-muted);
+}
+button#oc-scenes-open-broadcast {
+  margin-left: auto;
+  font-family: var(--oc-font-body);
+  font-weight: 500;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--oc-surface-edge);
+  cursor: pointer;
+  color: var(--oc-text);
+  background: transparent;
+}
+button#oc-scenes-open-broadcast:hover {
+  border-color: var(--oc-rose);
+}
+#oc-scenes-notice {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--oc-rose);
+  background: var(--oc-surface);
+  color: var(--oc-text);
+  font-size: 12px;
+}
+#oc-scenes-notice a {
+  color: var(--oc-rose);
+  font-weight: 600;
+}
+#oc-scenes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.oc-scene-chip {
+  flex: 1 1 150px;
+  min-width: 140px;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--oc-surface-edge);
+  background: var(--oc-surface);
+}
+.oc-scene-chip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.oc-scene-label {
+  font-family: var(--oc-font-display);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--oc-text);
+  white-space: nowrap;
+}
+.oc-scene-live-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: var(--oc-space);
+  background: var(--oc-rose);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.oc-scene-live-tag[hidden] {
+  display: none;
+}
+.oc-scene-chip-actions {
+  display: flex;
+  gap: 6px;
+}
+.oc-scene-chip-actions button {
+  flex: 1 1 auto;
+  font-family: var(--oc-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--oc-surface-edge);
+  cursor: pointer;
+  color: var(--oc-text);
+  background: transparent;
+  white-space: nowrap;
+}
+.oc-scene-chip-actions button.oc-scene-golive-btn {
+  color: var(--oc-space);
+  background: linear-gradient(120deg, var(--oc-rose), var(--oc-purple));
+  border: none;
+}
+.oc-scene-chip-actions button:hover {
+  filter: brightness(1.08);
+}
+.oc-scene-preview-slot {
+  margin-top: 8px;
+}
+.oc-scene-preview-slot:empty {
+  margin-top: 0;
+}
+iframe.oc-scene-preview-frame {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--oc-surface-edge);
+  border-radius: 6px;
+  background: #000;
+  display: block;
+}
+
+/* Narrow widths (iPad-portrait-and-down): one column, full-width open
+   button instead of pushed right, so the strip never crowds the
+   header's own T-336 status line (a different DOM section entirely —
+   #header vs #directorlayout — but both must still read cleanly at
+   390 stacked one above the other). */
+@media (max-width: 480px) {
+  #oc-scenes-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  button#oc-scenes-open-broadcast {
+    margin-left: 0;
+    width: 100%;
+  }
+  .oc-scene-chip {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------
    Quiet AGPL/source line brand.js appends into #credits
    --------------------------------------------------------------- */
 .oc-quiet-credit {
