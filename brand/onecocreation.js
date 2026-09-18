@@ -34,8 +34,17 @@
 	// params VDO recognises (main.js:2037 webcam/wc/miconly,
 	// main.js:2058 screenshare/ss, main.js:2065 fileshare/fs,
 	// main.js:2076 website/iframe, main.js:2085 framegrab) and not a
-	// director/view/push link.
-	var sourceParams = ["webcam", "wc", "miconly", "screenshare", "ss", "fileshare", "fs", "website", "iframe", "framegrab", "push", "view", "permaid"];
+	// director/view/push/SCENE link. "scene" added here TASK-338 --
+	// LIVE-CAUGHT BUG (this lane's own rig screenshot): without it, a
+	// scene-viewer URL (`?scene=<n>&room=<r>`, this lane's own preview
+	// iframe src) was mis-classified as a bare guest join and got OUR
+	// OWN mountJoinDoor() overlay slapped on top of the composited
+	// video instead of showing the scene -- `&scene` is every bit as
+	// much a real VDO view-mode param as `&view` (already in this
+	// list) is (rawdoc.md:9098-9103), it was just missing from this
+	// pre-existing array (T-262/T-302, unrelated to this lane's own
+	// new code, but this file is this lane's to fix).
+	var sourceParams = ["webcam", "wc", "miconly", "screenshare", "ss", "fileshare", "fs", "website", "iframe", "framegrab", "push", "view", "permaid", "scene"];
 	var hasSourceParam = sourceParams.some(function (p) { return params.has(p); });
 	var isBareGuestJoin = !isDirectorMode && !!roomId && !hasSourceParam;
 
@@ -294,18 +303,24 @@
 	}
 
 	// Same-origin iframe (the scene URL shares this page's origin) --
-	// its own <video> elements can be reached directly. Defensive
-	// workaround for the brief's own open question (no documented
-	// VIEWER-side &mute param exists in this fork -- &mute, main.js:
-	// 2229, is PUBLISH-side only): if the browser's autoplay policy
-	// ever blocked an unmuted play() call, forcing .muted = true and
-	// retrying play() is the one path muted autoplay is ALWAYS legal
-	// for. Polled briefly since the fork's own video elements are
-	// created asynchronously as WebRTC negotiates, not at load -- see
-	// SUMMARY for what was actually observed live (whether this ever
-	// had to do anything, or the fork's own &autostart already worked).
+	// its own <video> elements can be reached directly. LIVE-VERIFIED
+	// this is load-bearing, not a defensive no-op (rig probe, fine-
+	// grain 75ms samples): Chrome never actually BLOCKS autoplay of
+	// this fork's WebRTC <video srcObject> elements, muted or not --
+	// no documented viewer-side &mute param exists either way (&mute,
+	// main.js:2229, is PUBLISH-side only) -- but the fork swaps in its
+	// REAL video element (replacing an initial muted placeholder) UN-
+	// MUTED by default once the stream attaches, which is wrong for an
+	// on-demand PREVIEW thumbnail (the brief's own worry: several of
+	// these could be open at once). This loop is what keeps a preview
+	// silent: it re-asserts .muted = true within one poll tick of that
+	// swap. Measured live: the unmuted instant lasts under one tick
+	// (~75ms observed at a 75ms probe cadence) before being caught --
+	// polled at 50ms here (tighter than the probe) to keep that gap as
+	// small as practical without a MutationObserver, which is a
+	// reasonable reach item if a zero-gap guarantee is ever needed.
 	function forceMutedAutoplay(iframe) {
-		var tries = 40; // ~10s at 250ms
+		var tries = 120; // ~6s at 50ms
 		function tick() {
 			tries--;
 			var doc = null;
@@ -321,7 +336,7 @@
 					}
 				}
 			}
-			if (tries > 0 && iframe.isConnected) setTimeout(tick, 250);
+			if (tries > 0 && iframe.isConnected) setTimeout(tick, 50);
 		}
 		tick();
 	}
