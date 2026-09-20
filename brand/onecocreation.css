@@ -282,6 +282,59 @@ body {
 }
 
 /* ---------------------------------------------------------------
+   Host-presence status line (TASK-336) -- appended into #header
+   (main.css's own dark chrome bar, hardcoded per the #oc-lockup note
+   above), so it always reads against the header's dark background
+   regardless of &whitemode/&whitetheme on the room itself. Text-safe:
+   no color-only meaning, no icon standing in for the word "connected".
+   --------------------------------------------------------------- */
+#oc-status-line {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10px;
+  font-family: var(--oc-font-body);
+}
+#oc-status-line .oc-status-count {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .02em;
+  color: var(--oc-cream);
+  background: var(--oc-panel);
+  border: 1px solid var(--oc-edge);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+/* text-safe, no color-only meaning: the WORD "Director is here" is the
+   signal, not a colour swap -- a dot is decorative only, never load-bearing */
+#oc-status-line .oc-status-director {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--oc-cream);
+  background: var(--oc-panel);
+  border: 1px solid var(--oc-rose);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+#oc-status-line .oc-status-director::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--oc-rose);
+  flex: none;
+}
+#oc-status-line .oc-status-director[hidden] {
+  display: none;
+}
+
+/* ---------------------------------------------------------------
    Quiet AGPL/source line brand.js appends into #credits
    --------------------------------------------------------------- */
 .oc-quiet-credit {

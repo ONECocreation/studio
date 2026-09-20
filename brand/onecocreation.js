@@ -398,6 +398,126 @@
 	}
 
 	// ---------------------------------------------------------------
+	// Host-presence status line (TASK-336, revised on Number One's
+	// send-back). Love's ask, precisely: "who/how many are connected to
+	// ME right now" -- not a reading of the native per-tile viewer
+	// badge, which double-counts in a multi-guest room and reads "0"
+	// for the common lone-guest case while "Director is here" shows
+	// beside it (self-contradicting -- the first cut of this line got
+	// this wrong; see brief-lane SUMMARY.md for the full correction).
+	//
+	// "N others here" / "no one else here yet" / "connecting…" — the
+	// count of DISTINCT peer UUIDs in the union of `session.pcs`
+	// (peers receiving MY stream) and `session.rpcs` (peers I'm
+	// connected to). Both are the fork's own live peer-connection
+	// registries, not reinvented: LIVE-VERIFIED (3 tabs -- director +
+	// 2 guests, puppeteer, port 4486, TASK-336 SUMMARY.md has the full
+	// run) that in this fork's mesh topology `pcs` and `rpcs` hold the
+	// IDENTICAL UUID set for every peer relationship observed (each
+	// peer counted once in each dict, same UUID key both places) — so
+	// summing badge VALUES (the first cut's mistake) double-counts,
+	// but a UUID-keyed set union never can, by construction, regardless
+	// of whether pcs/rpcs ever diverge (a one-way WHEP-style peer would
+	// still only be counted once). Both dicts were verified to PRUNE
+	// the UUID entirely on that peer's departure (not just null a
+	// property) within ~10s in every run.
+	//
+	// The general (non-WHEP) creation/deletion of `pcs[UUID]`/
+	// `rpcs[UUID]` for ordinary room peers is NOT in lib.js — grepped
+	// exhaustively, lib.js only ever manipulates NESTED properties of
+	// an already-existing entry (e.g. `delete session.rpcs[UUID].
+	// stats[...]`), never the whole top-level UUID key. It lives in the
+	// obfuscated `webrtc.js` (also brand-layer READ-ONLY, never
+	// touched): `webrtc.js:9` (the entire bundle is one minified line)
+	// near the `onGuestLeftMixMinus(...)` call does `delete _0x235e3c[
+	// 'rpcs'][UUID]` on a peer's departure, and a `pcs[UUID]` deletion
+	// sits nearby in the same departure cleanup; creation is two `=
+	// new RTCPeerConnection(...)` assignments into `pcs[UUID]` and
+	// `rpcs[UUID]` respectively, found via the shared hex string-table
+	// index each site reuses for the literal 'pcs'/'rpcs' property
+	// name. This is a live-code-reading citation, not a hand-trace —
+	// the actual proof this lane relies on is the runtime behaviour
+	// above (Object.keys(...) before/after each departure), not this
+	// source dig, since the file cannot be meaningfully line-cited
+	// beyond "the one line it all lives on."
+	//
+	// `session.rpcs[UUID].director === true` for the SAME shared
+	// director-tagging as before (unchanged from the prior cut, still
+	// live-verified in the 3-tab run: the two guests' own `rpcs` each
+	// correctly tag ONLY the director's UUID `true` and the other
+	// guest's UUID `null`/absent -- never mistags a fellow guest as the
+	// director). `session.rpcs` is still the one keyed off for THIS,
+	// not `session.directorList` (still verified NOT pruned on
+	// departure -- unchanged finding from the prior cut).
+	//
+	// No longer gated on `&showconnections` / `window.session.
+	// showConnections` -- this line no longer reads anything that flag
+	// controls (the native `.rem-con-count` DOM badge is untouched by
+	// this fork now; TASK-336's OC-site half correspondingly drops
+	// `&showconnections` from both links -- see that repo's SUMMARY).
+	// Only gated on `window.session` existing at all, so a guest never
+	// sees a fabricated "0" in the brief instant before `session` is
+	// even constructed.
+	// ---------------------------------------------------------------
+	function mountStatusLine() {
+		pollUntil(function () {
+			if (byId("oc-status-line")) return true;
+
+			var header = byId("header"); // index.html:102, present in every room/call view (director dashboard and guest in-call alike)
+			if (!header) return false;
+
+			var line = document.createElement("div");
+			line.id = "oc-status-line";
+			var countEl = document.createElement("span");
+			countEl.id = "oc-status-count";
+			countEl.className = "oc-status-count";
+			countEl.textContent = "connecting…";
+			line.appendChild(countEl);
+
+			var directorEl = document.createElement("span");
+			directorEl.id = "oc-status-director";
+			directorEl.className = "oc-status-director";
+			directorEl.textContent = "Director is here";
+			directorEl.hidden = true;
+			line.appendChild(directorEl);
+
+			header.appendChild(line);
+
+			function distinctPeerCount() {
+				if (!window.session) return null; // session not constructed yet -- never guess
+				var seen = {};
+				Object.keys(window.session.pcs || {}).forEach(function (u) { seen[u] = true; });
+				Object.keys(window.session.rpcs || {}).forEach(function (u) { seen[u] = true; });
+				return Object.keys(seen).length;
+			}
+
+			function directorPresent() {
+				if (!(window.session && window.session.rpcs)) return false;
+				var uuids = Object.keys(window.session.rpcs);
+				for (var i = 0; i < uuids.length; i++) {
+					if (window.session.rpcs[uuids[i]] && window.session.rpcs[uuids[i]].director === true) return true;
+				}
+				return false;
+			}
+
+			function updateStatus() {
+				var n = distinctPeerCount();
+				if (n === null) {
+					countEl.textContent = "connecting…";
+				} else if (n === 0) {
+					countEl.textContent = "no one else here yet";
+				} else {
+					countEl.textContent = n + (n === 1 ? " other here" : " others here");
+				}
+				directorEl.hidden = !directorPresent();
+			}
+			updateStatus();
+			setInterval(updateStatus, 1000);
+			return true;
+		}, 20, 250);
+	}
+
+	// ---------------------------------------------------------------
 	// boot
 	// ---------------------------------------------------------------
 	function boot() {
@@ -409,8 +529,15 @@
 					mountDirectorExtras(roomInfo);
 					return true;
 				}, 30, 200);
+				mountStatusLine();
 			} else if (isBareGuestJoin) {
 				mountJoinDoor(roomInfo);
+			} else if (effectiveRoomId) {
+				// in-call guest view (post-join-door redirect, a source
+				// param like &webcam is now present) -- the join door
+				// itself never shows a live count before a connection
+				// exists, so this branch is the guest's actual call view.
+				mountStatusLine();
 			}
 		});
 	}
